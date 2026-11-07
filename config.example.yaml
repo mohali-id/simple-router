@@ -32,6 +32,9 @@ application:
     - id: openai-images
       url: /v1/images/generations
       method: POST
+    - id: openai-images
+      url: /v1/images/edits
+      method: POST
     - id: openai-audio
       url: /v1/audio/speech
       method: POST
