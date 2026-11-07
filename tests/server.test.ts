@@ -11,6 +11,18 @@ describe('server & auth (Fase 2)', () => {
     expect(await res.json()).toMatchObject({ status: 'ok', name: 'test-router' });
   });
 
+  it('GET/HEAD /api/hello tanpa auth (cek koneksi Claude Code)', async () => {
+    const { app } = makeApp(noUpstream);
+    const head = await app.request('/api/hello', { method: 'HEAD' });
+    expect(head.status).toBe(200);
+    expect(await head.text()).toBe('');
+    const get = await app.request('/api/hello');
+    expect(get.status).toBe(200);
+    expect(await get.json()).toEqual({ message: 'hello' });
+    // Path /api lain tetap butuh auth.
+    expect((await app.request('/api/other')).status).toBe(401);
+  });
+
   it('401 format OpenAI tanpa key', async () => {
     const { app } = makeApp(noUpstream);
     const res = await app.request('/v1/models');

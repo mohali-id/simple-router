@@ -27,6 +27,9 @@ export const DEFAULT_ENDPOINTS: Endpoint[] = [
   { id: 'openai-vector-stores', url: '/v1/vector_stores', methods: ['GET', 'POST', 'DELETE'] },
 ];
 
+/** Endpoint publik yang sering dipanggil dan tidak perlu dicatat di log. */
+const QUIET_PATHS = new Set(['/health', '/api/hello']);
+
 export interface AppDeps {
   fetch?: typeof fetch;
   logger?: Logger;
@@ -74,7 +77,7 @@ export function createApp(config: Config, deps: AppDeps = {}): Hono<AppEnv> {
     const started = performance.now();
     await next();
     c.res.headers.set('x-router-request-id', reqId);
-    if (c.req.path === '/health') return;
+    if (QUIET_PATHS.has(c.req.path)) return;
     rc.logger.info('request', {
       req: reqId,
       method: c.req.method,
@@ -98,6 +101,8 @@ export function createApp(config: Config, deps: AppDeps = {}): Hono<AppEnv> {
 
   // --- publik ------------------------------------------------------------
   app.get('/health', (c) => c.json({ status: 'ok', name: config.application.name, version: config.application.version ?? null }));
+  // Cek koneksi yang dikirim Claude Code ke ANTHROPIC_BASE_URL (meniru api.anthropic.com). GET juga melayani HEAD.
+  app.get('/api/hello', (c) => c.json({ message: 'hello' }));
 
   // --- auth untuk semua endpoint lain -------------------------------------
   app.use('*', async (c, next) => {
