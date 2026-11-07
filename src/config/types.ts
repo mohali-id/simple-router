@@ -8,6 +8,8 @@ export interface Config {
     timeoutMs: number;
     cooldownMs: number;
     hotReload: boolean;
+    /** Prefix path ternormalisasi (`/router`) atau '' bila tanpa prefix. */
+    basePath: string;
   };
   application: {
     name: string;

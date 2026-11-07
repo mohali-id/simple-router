@@ -7,6 +7,7 @@ server:
   timeout-ms: 600000   # batas tunggu header respons upstream (stream tidak dipotong)
   cooldown-ms: 60000   # target gagal dipindah ke akhir antrean selama ini; 0 = nonaktif
   hot-reload: true     # muat ulang config saat file berubah (host/port butuh restart)
+  base-path: ""        # prefix semua endpoint, mis. "/router" → /router/v1/messages (/health tetap di root)
 
 application:
   name: AI API Router

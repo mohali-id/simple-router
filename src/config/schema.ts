@@ -19,7 +19,14 @@ const url = z
   .refine((v) => URL.canParse(v), 'harus URL yang valid')
   .transform((v) => v.replace(/\/+$/, ''));
 
-const resourceTarget = z.object({ provider: id }).strict();
+/** `router`, `/router/`, `/api/router` → `/router`, `/api/router`; `/` atau kosong → ''. */
+const basePath = z
+  .string()
+  .trim()
+  .transform((v) => `/${v}`.replace(/\/+/g, '/').replace(/\/$/, ''))
+  .refine((v) => /^(\/[A-Za-z0-9._~-]+)*$/.test(v), 'hanya boleh huruf, angka, ".", "_", "~", "-" dan "/"');
+
+const resourceTarget =z.object({ provider: id }).strict();
 
 export const rawConfigSchema = z
   .object({
@@ -33,9 +40,18 @@ export const rawConfigSchema = z
         'cooldown-ms': z.coerce.number().int().min(0).default(60_000),
         /** Muat ulang config otomatis saat file berubah. */
         'hot-reload': z.boolean().default(true),
+        /** Prefix path untuk semua endpoint, mis. `/router` → `/router/v1/messages`. Kosong = tanpa prefix. */
+        'base-path': basePath.default(''),
       })
       .strict()
-      .default({ host: '127.0.0.1', port: 20128, 'timeout-ms': 600_000, 'cooldown-ms': 60_000, 'hot-reload': true }),
+      .default({
+        host: '127.0.0.1',
+        port: 20128,
+        'timeout-ms': 600_000,
+        'cooldown-ms': 60_000,
+        'hot-reload': true,
+        'base-path': '',
+      }),
 
     application: z
       .object({

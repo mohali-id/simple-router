@@ -68,9 +68,11 @@ export async function loadConfig(path: string, options: Omit<LoadOptions, 'sourc
 function applyServerEnv(data: Record<string, unknown>, env: Env): Record<string, unknown> {
   const host = env.HOST?.trim();
   const port = env.PORT?.trim();
-  if (!host && !port) return data;
+  const basePath = env.BASE_PATH;
+  if (!host && !port && basePath === undefined) return data;
   const server = { ...((data.server as Record<string, unknown> | undefined) ?? {}) };
   if (host) server.host = host;
   if (port) server.port = port;
+  if (basePath !== undefined) server['base-path'] = basePath;
   return { ...data, server };
 }

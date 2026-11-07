@@ -90,7 +90,7 @@ dan periksa `calls` (request yang dikirim ke upstream). Tidak ada network sunggu
 
 | Bagian | Arti |
 |---|---|
-| `server` | `host`, `port`, `timeout-ms` (tunggu header upstream), `cooldown-ms`, `hot-reload`. Semua opsional. |
+| `server` | `host`, `port`, `timeout-ms` (tunggu header upstream), `cooldown-ms`, `hot-reload`, `base-path` (prefix semua endpoint; di-strip sekali di `createApp` sebelum routing, `/health` tetap juga di root). Semua opsional. |
 | `application.auth[]` | API key yang boleh dipakai client (`type: api-key`, `name`, `key`). |
 | `application.endpoints[]` | Endpoint inbound. `id` = format request yang diterima endpoint tsb, `url` = path, `method` = string atau list. Kosong → `DEFAULT_ENDPOINTS` (`/v1/...`). |
 | `application.api-types[]` | Katalog format API (opsional). Jika diisi, endpoint & model hanya boleh memakai api-type yang terdaftar. |

@@ -105,7 +105,7 @@ routes:                                   # nama yang dikirim client di field `m
 
 | Bagian | Isi |
 |---|---|
-| `server` | `host`, `port`, `timeout-ms`, `cooldown-ms`, `hot-reload` (semua opsional) |
+| `server` | `host`, `port`, `timeout-ms`, `cooldown-ms`, `hot-reload`, `base-path` (semua opsional) |
 | `application.auth` | API key yang boleh dipakai client |
 | `application.endpoints` | Endpoint yang dibuka (opsional; default semua endpoint `/v1/...` di bawah) |
 | `application.resources` | Provider default untuk Files / Vector Stores |
@@ -116,8 +116,26 @@ routes:                                   # nama yang dikirim client di field `m
 Config divalidasi saat start (field salah ketik, referensi yang tidak ada, env yang belum di-set) dengan
 pesan error yang menunjuk field-nya. Client juga boleh memanggil model langsung sebagai `provider/model-id`.
 
-**Environment variable:** `CONFIG_PATH` (default `./config.yaml`), `HOST`, `PORT`, `LOG_LEVEL`
-(`debug`/`info`/`warn`/`error`/`silent`), `CONFIG_POLL_MS`.
+**Environment variable:** `CONFIG_PATH` (default `./config.yaml`), `HOST`, `PORT`, `BASE_PATH`,
+`LOG_LEVEL` (`debug`/`info`/`warn`/`error`/`silent`), `CONFIG_POLL_MS`.
+
+### Prefix path (`base-path`)
+
+Untuk menjalankan router di bawah sub-path (mis. di belakang reverse proxy):
+
+```yaml
+server:
+  base-path: /router
+```
+
+Semua endpoint pindah ke bawah prefix: `/v1/messages` → `/router/v1/messages`, begitu juga `/v1/models`,
+`/v1/files/**`, dan `/api/hello`. Path tanpa prefix menjadi 404. `/health` tetap tersedia di root (dan juga di
+`/router/health`) supaya healthcheck Docker tidak berubah. Prefix tidak ikut dikirim ke upstream, dan log
+mencatat path tanpa prefix. Base URL client ikut berubah, mis. `ANTHROPIC_BASE_URL=http://127.0.0.1:20128/router`
+dan `base_url="http://127.0.0.1:20128/router/v1"` untuk OpenAI SDK.
+
+Di Git Bash (Windows), `BASE_PATH=/router` diubah otomatis menjadi path Windows; set di `config.yaml`, atau
+jalankan dengan `MSYS_NO_PATHCONV=1`.
 
 ## Memakai router
 

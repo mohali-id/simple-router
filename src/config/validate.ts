@@ -148,6 +148,7 @@ export function validateAndNormalize(raw: RawConfig, issues: ConfigIssue[]): Con
       timeoutMs: raw.server['timeout-ms'],
       cooldownMs: raw.server['cooldown-ms'],
       hotReload: raw.server['hot-reload'],
+      basePath: raw.server['base-path'],
     },
     application: {
       name: app.name,

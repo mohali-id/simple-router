@@ -5,7 +5,6 @@ import { serve } from '@hono/node-server';
 import type { Hono } from 'hono';
 import { createApp } from './app.js';
 import { type Config, ConfigError, loadConfig } from './config/index.js';
-import type { AppEnv } from './context.js';
 import { createLogger } from './logger.js';
 import { createState } from './state.js';
 
@@ -22,7 +21,7 @@ function summary(config: Config): string {
 
 async function main(): Promise<void> {
   let config = await loadConfig(configPath);
-  let app: Hono<AppEnv> = createApp(config, { logger, state });
+  let app: Hono = createApp(config, { logger, state });
   logger.info(`config dimuat: ${summary(config)}`, { file: configPath });
 
   const server = serve(

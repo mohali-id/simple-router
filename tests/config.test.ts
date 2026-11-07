@@ -46,6 +46,7 @@ describe('parseConfig', () => {
       timeoutMs: 600_000,
       cooldownMs: 60_000,
       hotReload: true,
+      basePath: '',
     });
     expect(config.providers[0]?.type).toBe('openai');
     expect(config.providers[0]?.baseUrl).toBe('https://api.openai.com/v1');
@@ -68,6 +69,17 @@ describe('parseConfig', () => {
     ]);
     const files = config.application.endpoints.find((e) => e.id === 'openai-files');
     expect(files?.methods).toEqual(['GET', 'POST', 'DELETE']);
+  });
+
+  it('base-path dinormalisasi & bisa dari env BASE_PATH', () => {
+    const withBase = (value: string) => parseConfig(`server:\n  base-path: "${value}"\n${MINIMAL}`, { env: {} }).server.basePath;
+    expect(withBase('/router')).toBe('/router');
+    expect(withBase('router/')).toBe('/router');
+    expect(withBase('//api//router//')).toBe('/api/router');
+    expect(withBase('/')).toBe('');
+    expect(withBase('')).toBe('');
+    expect(issuesOf(() => withBase('/a b'))[0]).toMatch(/^server\.base-path:/);
+    expect(parseConfig(MINIMAL, { env: { BASE_PATH: 'gw' } }).server.basePath).toBe('/gw');
   });
 
   it('HOST/PORT dari env meng-override server', () => {

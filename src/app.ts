@@ -58,7 +58,45 @@ function modelList(config: Config) {
   return { object: 'list', data, has_more: false, first_id: data[0]?.id ?? null, last_id: data.at(-1)?.id ?? null };
 }
 
-export function createApp(config: Config, deps: AppDeps = {}): Hono<AppEnv> {
+/**
+ * Buat app router. Bila `server.base-path` diisi (mis. `/router`), semua endpoint
+ * dilayani di bawah prefix itu; `/health` tetap juga tersedia di root untuk healthcheck.
+ */
+export function createApp(config: Config, deps: AppDeps = {}): Hono {
+  const inner = createRouterApp(config, deps);
+  const prefix = config.server.basePath;
+  if (!prefix) return inner as unknown as Hono;
+
+  const outer = new Hono();
+  // Buang prefix sekali di pintu masuk; routing, path upstream & log di dalam tidak berubah.
+  const forward = (c: { req: { raw: Request } }) => inner.fetch(stripPrefix(c.req.raw, prefix));
+  outer.all(prefix, forward);
+  outer.all(`${prefix}/*`, forward);
+  outer.get('/health', forward); // tanpa prefix: dipakai healthcheck Docker
+  outer.notFound((c) =>
+    errorResponse('openai', 404, `endpoint ${c.req.method} ${c.req.path} tidak ada (base path: ${prefix})`),
+  );
+  return outer;
+}
+
+function stripPrefix(req: Request, prefix: string): Request {
+  const url = new URL(req.url);
+  if (url.pathname === prefix || url.pathname.startsWith(`${prefix}/`)) {
+    url.pathname = url.pathname.slice(prefix.length) || '/';
+  }
+  const hasBody = req.method !== 'GET' && req.method !== 'HEAD';
+  // Body diteruskan sebagai stream (tanpa ditampung), sama seperti tanpa prefix.
+  const init: RequestInit & { duplex?: 'half' } = {
+    method: req.method,
+    headers: req.headers,
+    body: hasBody ? req.body : undefined,
+    signal: req.signal,
+    ...(hasBody && req.body ? { duplex: 'half' as const } : {}),
+  };
+  return new Request(url, init);
+}
+
+function createRouterApp(config: Config, deps: AppDeps): Hono<AppEnv> {
   const rc: RouterContext = {
     config,
     state: deps.state ?? createState(),
