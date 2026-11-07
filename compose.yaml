@@ -1,0 +1,35 @@
+# docker compose up -d --build
+# Secret diambil dari .env (lihat .env.example); config.yaml di-mount read-only.
+name: simple-router
+
+services:
+  router:
+    build: .
+    image: simple-router:latest
+    container_name: simple-router
+    restart: unless-stopped
+    ports:
+      # Ganti jadi "20128:20128" bila router perlu diakses dari mesin lain.
+      - "127.0.0.1:${ROUTER_PORT:-20128}:20128"
+    env_file:
+      - path: .env
+        required: true
+    environment:
+      HOST: 0.0.0.0
+      PORT: 20128
+      CONFIG_PATH: /app/config/config.yaml
+      # Bind mount Docker Desktop tidak meneruskan event file: pakai polling untuk hot reload.
+      CONFIG_POLL_MS: 2000
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    volumes:
+      - ./config.yaml:/app/config/config.yaml:ro
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"

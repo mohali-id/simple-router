@@ -1,0 +1,123 @@
+# Contoh config simple-router. Salin ke config.yaml lalu isi secret lewat .env.
+# Nilai ${VAR} diambil dari environment; ${VAR:-default} memakai default bila kosong.
+
+server:
+  host: ${HOST:-127.0.0.1}
+  port: 20128
+  timeout-ms: 600000   # batas tunggu header respons upstream (stream tidak dipotong)
+  cooldown-ms: 60000   # target gagal dipindah ke akhir antrean selama ini; 0 = nonaktif
+  hot-reload: true     # muat ulang config saat file berubah (host/port butuh restart)
+
+application:
+  name: AI API Router
+  version: 1.0.0
+  description: Router API AI sederhana (OpenAI / Anthropic), tanpa UI.
+
+  # API key yang dipakai client untuk mengakses router.
+  auth:
+    - type: api-key
+      name: default
+      key: ${ROUTER_API_KEY}
+
+  endpoints:
+    - id: openai-completions
+      url: /v1/chat/completions
+      method: POST
+    - id: openai-responses
+      url: /v1/responses
+      method: POST
+    - id: anthropic-messages
+      url: /v1/messages
+      method: POST
+    - id: openai-images
+      url: /v1/images/generations
+      method: POST
+    - id: openai-audio
+      url: /v1/audio/speech
+      method: POST
+    - id: openai-embeddings
+      url: /v1/embeddings
+      method: POST
+    - id: openai-moderation
+      url: /v1/moderations
+      method: POST
+    - id: openai-files
+      url: /v1/files
+      method: [GET, POST, DELETE]
+    - id: openai-vector-stores
+      url: /v1/vector_stores
+      method: [GET, POST, DELETE]
+
+  # Opsional. Jika diisi, endpoint & model hanya boleh memakai api-type yang terdaftar.
+  api-types:
+    - id: openai-completions
+      name: OpenAI Chat Completions API
+    - id: openai-responses
+      name: OpenAI Responses API
+    - id: anthropic-messages
+      name: Anthropic Messages API
+    - id: openai-images
+      name: OpenAI Images API
+    - id: openai-audio
+      name: OpenAI Audio API
+    - id: openai-embeddings
+      name: OpenAI Embeddings API
+    - id: openai-moderation
+      name: OpenAI Moderation API
+    - id: openai-files
+      name: OpenAI Files API
+    - id: anthropic-files
+      name: Anthropic Files API
+    - id: openai-vector-stores
+      name: OpenAI Vector Stores API
+
+  # Provider default untuk resource stateful (bisa dioverride header x-router-provider).
+  resources:
+    files:
+      provider: openai
+    vector-stores:
+      provider: openai
+
+providers:
+  - id: openai
+    name: OpenAI
+    base-url: https://api.openai.com/v1
+    api-key: ${OPENAI_API_KEY}
+  - id: anthropic
+    name: Anthropic
+    type: anthropic   # openai | anthropic; default ditebak dari base-url
+    base-url: https://api.anthropic.com/v1
+    api-key: ${ANTHROPIC_API_KEY}
+
+models:
+  - id: gpt-6-astra
+    name: GPT-6 Astra
+    provider: openai
+    api-type: openai-responses
+    capabilities: [reasoning, vision, audio]
+  - id: gpt-image-1.5
+    name: GPT Image 1.5
+    provider: openai
+    api-type: openai-images
+    capabilities: [image-generation, image-editing]
+  - id: claude-opus-5-5
+    name: Claude Opus 5.5
+    provider: anthropic
+    api-type: anthropic-messages
+    capabilities: [reasoning, vision]
+
+# Nilai field `model` yang dikirim client. `models` = rantai fallback berurutan.
+routes:
+  - id: gpt-6-astra
+    name: Coding Assistance
+    models:
+      - openai/gpt-6-astra
+  - id: gpt-image-1.5
+    name: Image Generation
+    models:
+      - openai/gpt-image-1.5
+  - id: opus-5-5
+    name: Opus 5.5
+    models:
+      - anthropic/claude-opus-5-5
+      - openai/gpt-6-astra
