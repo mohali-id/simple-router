@@ -63,6 +63,12 @@ docker compose up -d --build
 docker compose logs -f router
 ```
 
+Image siap pakai juga tersedia di GitHub Container Registry (dibuat otomatis setiap rilis):
+
+```bash
+docker pull ghcr.io/mohali-id/simple-router:latest
+```
+
 Compose me-mount `./config.yaml` (read-only) dan membaca secret dari `.env`. Port host bisa diganti dengan
 `ROUTER_PORT` di `.env`. Hot reload di container memakai polling (`CONFIG_POLL_MS`).
 
@@ -227,3 +233,24 @@ npm run build       # compile ke dist/
 ```
 
 Struktur kode, aturan, dan alur request ada di [AGENTS.md](AGENTS.md); roadmap di [PLAN.md](PLAN.md).
+
+### Rilis image
+
+Push tag berawalan `v` menjalankan [release-image.yml](.github/workflows/release-image.yml): typecheck + test,
+lalu build image `linux/amd64` + `linux/arm64` dan push ke `ghcr.io/mohali-id/simple-router`.
+
+```bash
+git tag v1.2.3
+```
+
+```bash
+git push origin v1.2.3
+```
+
+| Tag git | Tag image |
+|---|---|
+| `v1.2.3` | `1.2.3`, `1.2`, `1`, `latest`, `v1.2.3`, `sha-<commit>` |
+| `v0.4.0` | `0.4.0`, `0.4`, `latest`, `v0.4.0`, `sha-<commit>` (tanpa `0`) |
+| `v1.3.0-rc.1` | `1.3.0-rc.1`, `v1.3.0-rc.1`, `sha-<commit>` (pre-release: tanpa `latest`) |
+
+Package baru di GHCR defaultnya **private**; ubah ke public di *Package settings* bila perlu.
