@@ -6,9 +6,9 @@ dan tanpa database. Terinspirasi oleh 9router.
 
 ```
 client (Claude Code, OpenAI SDK, Cursor, ...)
-        │  model: "opus-5-5"
+        │  model: "claude-opus-5-5"
         ▼
-  simple-router ── route "opus-5-5" ──► 1. anthropic/claude-opus-5-5   (gagal 529)
+  simple-router ── route "claude-opus-5-5" ──► 1. anthropic/claude-opus-5-5   (gagal 529)
                                         2. openai/gpt-6-astra          (dipakai, ditranslasi)
 ```
 
@@ -93,7 +93,7 @@ models:                                   # model di provider + format API-nya
   - { id: claude-opus-5-5, provider: anthropic, api-type: anthropic-messages }
 
 routes:                                   # nama yang dikirim client di field `model`
-  - id: opus-5-5
+  - id: claude-opus-5-5
     models: [anthropic/claude-opus-5-5, openai/gpt-6-astra]   # rantai fallback
 ```
 
@@ -122,12 +122,13 @@ Auth ke router: `Authorization: Bearer <key>` **atau** `x-api-key: <key>`.
 ```bash
 export ANTHROPIC_BASE_URL=http://127.0.0.1:20128
 export ANTHROPIC_AUTH_TOKEN=<ROUTER_API_KEY>
-export ANTHROPIC_MODEL=opus-5-5
+export ANTHROPIC_MODEL=claude-opus-5-5
 claude
 ```
 
-Jika route mengarah ke model OpenAI, request ditranslasi otomatis. Peringatan *"Model isn't recognized"*
-dari Claude Code hanya berarti nama route tidak ada di daftar model bawaannya, dan aman diabaikan.
+Jika route mengarah ke model OpenAI, request ditranslasi otomatis. Beri route nama ID model Claude asli
+(mis. `claude-opus-5-5`) agar Claude Code tidak menampilkan peringatan *"Model isn't recognized"*. Catatan: Claude Code
+lalu memakai context window model Claude tersebut; pastikan model upstream punya context yang setara.
 
 ### OpenAI SDK
 
@@ -135,7 +136,7 @@ dari Claude Code hanya berarti nama route tidak ada di daftar model bawaannya, d
 from openai import OpenAI
 
 client = OpenAI(base_url="http://127.0.0.1:20128/v1", api_key="<ROUTER_API_KEY>")
-reply = client.chat.completions.create(model="opus-5-5", messages=[{"role": "user", "content": "halo"}])
+reply = client.chat.completions.create(model="claude-opus-5-5", messages=[{"role": "user", "content": "halo"}])
 print(reply.choices[0].message.content)
 ```
 
@@ -144,7 +145,7 @@ print(reply.choices[0].message.content)
 ```bash
 curl -N http://127.0.0.1:20128/v1/messages \
   -H "x-api-key: $ROUTER_API_KEY" -H "content-type: application/json" \
-  -d '{"model":"opus-5-5","max_tokens":256,"stream":true,"messages":[{"role":"user","content":"halo"}]}'
+  -d '{"model":"claude-opus-5-5","max_tokens":256,"stream":true,"messages":[{"role":"user","content":"halo"}]}'
 ```
 
 ## Endpoint
@@ -185,6 +186,26 @@ curl http://127.0.0.1:20128/v1/files -H "Authorization: Bearer $ROUTER_API_KEY" 
 
 Request chat yang memakai `file_id` / `vector_store_ids` sebaiknya juga mengirim `x-router-provider`, agar
 router hanya memakai target di provider pemilik file tersebut.
+
+## Log
+
+Setiap request dicatat saat **mulai** dan saat **selesai**; stream juga dicatat per event. Isi prompt,
+jawaban, dan API key tidak pernah ditulis ke log, hanya metadata (tipe event, ukuran, durasi).
+
+```
+INFO  request start       req=… method=POST path=/v1/messages
+INFO  request done        req=… route=claude-opus-5-5 target=openai/gpt-6-astra status=200 ms=1199      ← non-stream
+INFO  stream start        req=… route=… target=… status=200 header_ms=812                        ← stream
+INFO  stream first event  req=… event=message_start ttfb_ms=815
+DEBUG stream event        req=… n=3 event=content_block_delta bytes=119
+INFO  stream done         req=… outcome=completed events=57 bytes=8421 ms=4226
+```
+
+- `stream event` per event ada di level `debug`: jalankan dengan `LOG_LEVEL=debug` untuk melihatnya
+  (di level `info` hanya event pertama dan ringkasan akhir, agar log tidak banjir).
+- `outcome`: `completed`, `completed_with_error` (upstream mengirim event error), `aborted` (client memutus),
+  atau `failed`. Selain `completed` dicatat sebagai `WARN`.
+- `/health` dan `/api/hello` tidak dicatat.
 
 ## Batasan
 

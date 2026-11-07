@@ -62,7 +62,7 @@ describe('parseConfig', () => {
     const config = parseConfig(text, { env: ENV });
     expect(config.application.auth[0]?.key).toBe(ENV.ROUTER_API_KEY);
     expect(config.application.resources.vectorStores).toEqual({ provider: 'openai' });
-    expect(config.routes.find((r) => r.id === 'opus-5-5')?.models).toEqual([
+    expect(config.routes.find((r) => r.id === 'claude-opus-5-5')?.models).toEqual([
       'anthropic/claude-opus-5-5',
       'openai/gpt-6-astra',
     ]);

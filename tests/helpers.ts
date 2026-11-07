@@ -1,6 +1,6 @@
 import { createApp } from '../src/app.js';
 import { parseConfig } from '../src/config/index.js';
-import { silentLogger } from '../src/logger.js';
+import { type LogFields, type Logger, silentLogger } from '../src/logger.js';
 import { createState, type RouterState } from '../src/state.js';
 
 export const CLIENT_KEY = 'sk-client-test-key';
@@ -59,11 +59,24 @@ export function mockFetch(upstream: Upstream) {
   return { fetch: fetchFn, calls };
 }
 
-export function makeApp(upstream: Upstream, options: { config?: string; state?: RouterState } = {}) {
+export interface LogLine {
+  level: 'debug' | 'info' | 'warn' | 'error';
+  msg: string;
+  fields: LogFields;
+}
+
+/** Logger yang menyimpan semua baris (semua level) untuk diperiksa test. */
+export function captureLogger(): Logger & { lines: LogLine[] } {
+  const lines: LogLine[] = [];
+  const at = (level: LogLine['level']) => (msg: string, fields: LogFields = {}) => void lines.push({ level, msg, fields });
+  return { lines, debug: at('debug'), info: at('info'), warn: at('warn'), error: at('error') };
+}
+
+export function makeApp(upstream: Upstream, options: { config?: string; state?: RouterState; logger?: Logger } = {}) {
   const config = parseConfig(options.config ?? TEST_CONFIG, { env: {} });
   const mock = mockFetch(upstream);
   const state = options.state ?? createState();
-  const app = createApp(config, { fetch: mock.fetch, logger: silentLogger, state });
+  const app = createApp(config, { fetch: mock.fetch, logger: options.logger ?? silentLogger, state });
   return { app, calls: mock.calls, state, config };
 }
 

@@ -52,6 +52,7 @@ src/
   errors.ts             # RouterError + body error format OpenAI / Anthropic
   http.ts               # whitelist header request/response, SSE headers
   logger.ts             # logger satu baris (LOG_LEVEL), tanpa secret
+  stream-log.ts         # bungkus body SSE: log first event, tiap event (debug), stream done
   state.ts              # state in-memory: cooldown per target
   sse.ts                # parser & writer SSE
   config/

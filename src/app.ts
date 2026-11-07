@@ -9,6 +9,7 @@ import { createChatHandler } from './routes/chat.js';
 import { createModelPassthroughHandler } from './routes/model-passthrough.js';
 import { createResourceHandler } from './routes/resources.js';
 import { createState, type RouterState } from './state.js';
+import { logStream } from './stream-log.js';
 import { isChatFormat } from './translate/index.js';
 
 /** Dipakai bila `application.endpoints` di config kosong. */
@@ -75,19 +76,36 @@ export function createApp(config: Config, deps: AppDeps = {}): Hono<AppEnv> {
     c.set('reqId', reqId);
     c.set('errorFormat', anthropicPaths.has(c.req.path) ? 'anthropic' : 'openai');
     const started = performance.now();
+    const quiet = QUIET_PATHS.has(c.req.path);
+    if (!quiet) rc.logger.info('request start', { req: reqId, method: c.req.method, path: c.req.path });
+
     await next();
     c.res.headers.set('x-router-request-id', reqId);
-    if (QUIET_PATHS.has(c.req.path)) return;
-    rc.logger.info('request', {
+    if (quiet) return;
+
+    const fields = {
       req: reqId,
       method: c.req.method,
       path: c.req.path,
-      status: c.res.status,
-      ms: Math.round(performance.now() - started),
       route: c.get('route'),
       target: c.get('target'),
       fallbacks: c.get('fallbacks') || undefined,
-    });
+    };
+    const isStream = c.res.ok && c.res.body !== null && (c.res.headers.get('content-type') ?? '').includes('text/event-stream');
+
+    if (!isStream) {
+      rc.logger.info('request done', { ...fields, status: c.res.status, ms: Math.round(performance.now() - started) });
+      return;
+    }
+
+    // Stream: header sudah siap, body baru mengalir. Akhir stream dicatat oleh logStream.
+    rc.logger.info('stream start', { ...fields, status: c.res.status, header_ms: Math.round(performance.now() - started) });
+    const res = c.res;
+    c.res = undefined; // lepas respons lama agar Hono tidak menggabungkan header
+    c.res = new Response(
+      logStream(res.body!, { logger: rc.logger, fields: { req: reqId, route: fields.route, target: fields.target }, startedAt: started }),
+      { status: res.status, statusText: res.statusText, headers: res.headers },
+    );
   });
 
   app.onError((err, c) => {
